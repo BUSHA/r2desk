@@ -3,6 +3,10 @@ import R2Core
 import UniformTypeIdentifiers
 import QuickLookUI
 
+private extension RemoteItem {
+    var modificationSortDate: Date { modified ?? .distantPast }
+}
+
 struct MainView: View {
     @EnvironmentObject private var model: AppModel
     var body: some View {
@@ -254,7 +258,7 @@ struct FolderView: View {
                     TableColumn("Size", value: \.size) { item in
                         Text(item.isFolder ? "—" : ByteCountFormatter.string(fromByteCount: item.size, countStyle: .file)).foregroundStyle(.secondary)
                     }.width(90)
-                    TableColumn("Modified") { item in
+                    TableColumn("Modified", value: \.modificationSortDate) { item in
                         Text(item.modified?.formatted(date: .abbreviated, time: .shortened) ?? "—").foregroundStyle(.secondary)
                     }.width(min: 140, ideal: 180)
                 }
