@@ -73,7 +73,9 @@ and storage locations in UserDefaults. It does not send keys to another server o
   stops, files already transferred or deleted stay in that state. Refresh shows the result.
 - Remote keys that contain unsafe local paths cannot be downloaded as folder contents.
   Local symbolic links are not followed. Symbolic links inside uploaded folders are skipped.
-- Tabs and transfer history stay in the current app session. Connections stay after restart.
+- Open tabs, tab order, the selected tab, folder history, search text, and selection stay
+  after restart. The app reloads the file lists and removes selections for missing files.
+  Tabs for removed connections are not restored. Transfer history stays in the current app session.
 
 ## Build and test
 

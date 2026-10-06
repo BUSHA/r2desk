@@ -5,18 +5,22 @@ import R2Core
 
 @MainActor
 final class FolderTab: ObservableObject, Identifiable {
-    let id = UUID()
+    let id: UUID
     let connectionID: UUID
-    @Published private(set) var location: BrowserLocation
+    @Published private(set) var location: BrowserLocation { didSet { onSessionChange?() } }
     @Published var items: [RemoteItem] = []
     @Published var buckets: [RemoteBucket] = []
-    @Published var selection = Set<String>()
-    @Published var search = ""
+    @Published var selection = Set<String>() { didSet { onSessionChange?() } }
+    @Published var search = "" { didSet { onSessionChange?() } }
     @Published var loading = false
     @Published var error: String?
     private var history: BrowserHistory
     private var loadTask: Task<Void, Never>?
     private var requestID = UUID()
+    var onSessionChange: (() -> Void)?
+    var savedState: SavedBrowserTab {
+        SavedBrowserTab(id: id, connectionID: connectionID, history: history, search: search, selection: selection)
+    }
     var prefix: String { location.prefix }
     var bucket: String? { location.bucket }
     var title: String { location.title }
@@ -26,7 +30,11 @@ final class FolderTab: ObservableObject, Identifiable {
     var visibleItems: [RemoteItem] { items.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) } }
     var selectedItems: [RemoteItem] { visibleItems.filter { selection.contains($0.key) } }
     init(connectionID: UUID, location: BrowserLocation = .buckets) {
-        self.connectionID = connectionID; self.location = location; history = BrowserHistory(location: location)
+        id = UUID(); self.connectionID = connectionID; self.location = location; history = BrowserHistory(location: location)
+    }
+    init(savedState: SavedBrowserTab) {
+        id = savedState.id; connectionID = savedState.connectionID; history = savedState.history
+        location = history.location; search = savedState.search; selection = savedState.selection
     }
     func navigate(_ location: BrowserLocation) -> Bool {
         guard history.navigate(location) else { return false }
@@ -88,8 +96,8 @@ struct PreviewDocument: Identifiable {
 @MainActor
 final class AppModel: ObservableObject {
     @Published var connections: [Connection] = []
-    @Published var tabs: [FolderTab] = []
-    @Published var activeTabID: UUID?
+    @Published var tabs: [FolderTab] = [] { didSet { saveSession() } }
+    @Published var activeTabID: UUID? { didSet { saveSession() } }
     @Published var showConnection = false
     @Published var editingConnection: Connection?
     @Published var showTransfers = false
@@ -109,6 +117,8 @@ final class AppModel: ObservableObject {
     private var tabObservers: [UUID: AnyCancellable] = [:]
     private var previewFolder: URL?
     private let preferencesKey = "R2Desk.connections.v1"
+    private let sessionKey = "R2Desk.session.v1"
+    private var restoringSession = true
     var current: FolderTab? { tabs.first { $0.id == activeTabID } }
 
     init(clientFactory: @escaping (Connection, String?, Credentials) -> S3Client = {
@@ -117,7 +127,29 @@ final class AppModel: ObservableObject {
         self.clientFactory = clientFactory
         if let data = UserDefaults.standard.data(forKey: preferencesKey),
            let saved = try? JSONDecoder().decode([Connection].self, from: data) { connections = saved }
-        if let connection = connections.first { openTab(connectionID: connection.id) }
+        if let data = UserDefaults.standard.data(forKey: sessionKey),
+           let session = try? JSONDecoder().decode(BrowserSession.self, from: data) {
+            var restoredIDs = Set<UUID>()
+            for state in session.tabs where connection(state.connectionID) != nil && restoredIDs.insert(state.id).inserted {
+                let tab = FolderTab(savedState: state)
+                observe(tab); tabs.append(tab)
+            }
+            activeTabID = tabs.first(where: { $0.id == session.activeTabID })?.id ?? tabs.first?.id
+        }
+        if tabs.isEmpty, let connection = connections.first { openTab(connectionID: connection.id) }
+        else { for tab in tabs { reload(tab) } }
+        restoringSession = false
+        saveSession()
+    }
+    func saveSession() {
+        guard !restoringSession else { return }
+        let session = BrowserSession(tabs: tabs.map(\.savedState), activeTabID: activeTabID)
+        do { UserDefaults.standard.set(try JSONEncoder().encode(session), forKey: sessionKey) }
+        catch { alert = "The open tabs could not be saved. \(error.localizedDescription)" }
+    }
+    private func observe(_ tab: FolderTab) {
+        tabObservers[tab.id] = tab.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        tab.onSessionChange = { [weak self] in self?.saveSession() }
     }
     func connection(_ id: UUID) -> Connection? { connections.first { $0.id == id } }
     func connectionName(_ id: UUID) -> String { connection(id)?.name ?? "Connection unavailable" }
@@ -131,7 +163,7 @@ final class AppModel: ObservableObject {
     }
     @discardableResult func openTab(connectionID: UUID, location: BrowserLocation = .buckets, buckets: [RemoteBucket]? = nil) -> FolderTab {
         let tab = FolderTab(connectionID: connectionID, location: location)
-        tabObservers[tab.id] = tab.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        observe(tab)
         tabs.append(tab); activeTabID = tab.id
         if location == .buckets, let buckets { tab.showBuckets(buckets) }
         else { reload(tab) }

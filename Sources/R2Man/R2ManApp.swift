@@ -8,6 +8,7 @@ struct R2ManApp: App {
     var body: some Scene {
         Window("R2 Desk", id: "main") {
             MainView().environmentObject(model)
+                .onAppear { delegate.model = model }
                 .frame(minWidth: 860, minHeight: 540)
                 .tint(.orange)
         }
@@ -46,6 +47,7 @@ enum AppIcon {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    weak var model: AppModel?
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let icon = AppIcon.image {
             NSApp.applicationIconImage = icon
@@ -55,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        model?.saveSession()
         // File writes use temporary files. URLSession stops when this process ends.
         return .terminateNow
     }
