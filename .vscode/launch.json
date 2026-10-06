@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:r2man}",
+            "name": "Debug R2Man",
+            "target": "R2Man",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug R2Man"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:r2man}",
+            "name": "Release R2Man",
+            "target": "R2Man",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release R2Man"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:r2man}",
+            "name": "Debug R2CoreChecks",
+            "target": "R2CoreChecks",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug R2CoreChecks"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:r2man}",
+            "name": "Release R2CoreChecks",
+            "target": "R2CoreChecks",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release R2CoreChecks"
+        }
+    ]
+}
