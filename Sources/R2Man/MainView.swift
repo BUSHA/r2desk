@@ -12,7 +12,8 @@ struct MainView: View {
     @State private var sidebarVisibility: NavigationSplitViewVisibility = .all
     var body: some View {
         NavigationSplitView(columnVisibility: $sidebarVisibility) {
-            sidebar.navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 280)
+            sidebar.navigationTitle("")
+                .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 280)
         } detail: {
             HSplitView {
                 browser.frame(minWidth: 400, maxWidth: .infinity, maxHeight: .infinity)
@@ -22,18 +23,7 @@ struct MainView: View {
                 }
             }
         }
-        .toolbar(removing: .sidebarToggle)
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    sidebarVisibility = sidebarVisibility == .detailOnly ? .all : .detailOnly
-                } label: {
-                    Image(systemName: "sidebar.left").frame(width: 24, height: 24)
-                }
-                .help(sidebarVisibility == .detailOnly ? "Show Sidebar" : "Hide Sidebar")
-                .accessibilityLabel("Toggle Sidebar")
-                .keyboardShortcut("s", modifiers: [.command, .control])
-            }
             ToolbarItemGroup(placement: .navigation) {
                 if model.current != nil {
                     Button(action: model.goBack) { Image(systemName: "chevron.left") }
@@ -42,16 +32,6 @@ struct MainView: View {
                         .disabled(model.current?.canGoForward != true).help("Forward")
                     Button(action: model.goUp) { Image(systemName: "arrow.up") }
                         .disabled(model.current?.location.parent == nil).help("Parent folder")
-                }
-            }
-            ToolbarItem(placement: .principal) {
-                if let tab = model.current {
-                    Text(tab.bucket ?? model.connectionName(tab.connectionID))
-                        .font(.headline)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .padding(.horizontal, 12)
-                        .help(model.connectionName(tab.connectionID))
                 }
             }
             ToolbarItemGroup(placement: .primaryAction) {
