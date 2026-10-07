@@ -9,28 +9,31 @@ private extension RemoteItem {
 
 struct MainView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var sidebarVisibility: NavigationSplitViewVisibility = .all
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $sidebarVisibility) {
             sidebar.navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 280)
         } detail: {
-            VStack(spacing: 0) {
-                if !model.tabs.isEmpty { tabBar }
-                if let tab = model.current {
-                    if tab.bucket == nil { BucketView(tab: tab).id(tab.id) }
-                    else { FolderView(tab: tab).id(tab.id) }
-                    footer
-                } else {
-                    VStack(spacing: 16) {
-                        if let icon = AppIcon.image {
-                            Image(nsImage: icon).resizable().scaledToFit().frame(width: 96, height: 96)
-                        }
-                        Text("No connections").font(.title3.weight(.semibold))
-                        Button("Add R2 connection", action: model.addConnection)
-                    }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            HSplitView {
+                browser.frame(minWidth: 400, maxWidth: .infinity, maxHeight: .infinity)
+                if model.showTransfers {
+                    TransfersView().environmentObject(model)
+                        .frame(minWidth: 260, idealWidth: 300, maxWidth: 420, maxHeight: .infinity)
                 }
             }
         }
+        .toolbar(removing: .sidebarToggle)
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    sidebarVisibility = sidebarVisibility == .detailOnly ? .all : .detailOnly
+                } label: {
+                    Image(systemName: "sidebar.left").frame(width: 24, height: 24)
+                }
+                .help(sidebarVisibility == .detailOnly ? "Show Sidebar" : "Hide Sidebar")
+                .accessibilityLabel("Toggle Sidebar")
+                .keyboardShortcut("s", modifiers: [.command, .control])
+            }
             ToolbarItemGroup(placement: .navigation) {
                 if model.current != nil {
                     Button(action: model.goBack) { Image(systemName: "chevron.left") }
@@ -67,13 +70,31 @@ struct MainView: View {
         .sheet(isPresented: $model.showConnection) {
             ConnectionView(existing: model.editingConnection).environmentObject(model)
         }
-        .sheet(isPresented: $model.showTransfers) { TransfersView().environmentObject(model) }
         .sheet(item: $model.previewDocument, onDismiss: model.clearPreview) { document in
             PreviewSheet(document: document)
         }
         .alert("Operation failed", isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } })) {
             Button("OK") { model.alert = nil }
         } message: { Text(model.alert ?? "") }
+    }
+
+    private var browser: some View {
+        VStack(spacing: 0) {
+            if !model.tabs.isEmpty { tabBar }
+            if let tab = model.current {
+                if tab.bucket == nil { BucketView(tab: tab).id(tab.id) }
+                else { FolderView(tab: tab).id(tab.id) }
+                footer
+            } else {
+                VStack(spacing: 16) {
+                    if let icon = AppIcon.image {
+                        Image(nsImage: icon).resizable().scaledToFit().frame(width: 96, height: 96)
+                    }
+                    Text("No connections").font(.title3.weight(.semibold))
+                    Button("Add R2 connection", action: model.addConnection)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
     }
 
     private var sidebar: some View {
@@ -88,7 +109,7 @@ struct MainView: View {
             ScrollView {
                 VStack(spacing: 4) {
                     ForEach(model.connections) { connection in
-                        connectionRow(name: connection.name, detail: connection.jurisdiction.isEmpty ? "Buckets" : "Buckets · \(connection.jurisdiction.uppercased())", icon: "externaldrive", id: connection.id)
+                        connectionRow(name: connection.name, icon: "externaldrive", id: connection.id)
                             .contextMenu {
                                 Button("Open in New Tab") { model.openTab(connectionID: connection.id) }
                                 Button("Edit Connection…") { model.edit(connection) }.disabled(model.busy)
@@ -105,15 +126,12 @@ struct MainView: View {
             Spacer()
         }.background(.background.opacity(0.35))
     }
-    private func connectionRow(name: String, detail: String, icon: String, id: UUID) -> some View {
+    private func connectionRow(name: String, icon: String, id: UUID) -> some View {
         let selected = model.current?.connectionID == id
         return Button { model.selectConnection(id) } label: {
             HStack(spacing: 10) {
                 Image(systemName: icon).font(.title3).foregroundStyle(selected ? .orange : .secondary).frame(width: 24)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(name).font(.callout.weight(.medium)).lineLimit(1)
-                    Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
+                Text(name).font(.callout.weight(.medium)).lineLimit(1)
                 Spacer(minLength: 0)
                 if selected { Circle().fill(.orange).frame(width: 6, height: 6) }
             }.padding(10).contentShape(Rectangle())
@@ -187,13 +205,14 @@ private struct TabButton: View {
     @ObservedObject var tab: FolderTab
     @State private var hovered = false
     private var selected: Bool { model.activeTabID == tab.id }
+    private var title: String { tab.bucket == nil ? model.connectionName(tab.connectionID) : tab.title }
 
     var body: some View {
         ZStack(alignment: .trailing) {
             Button { model.activeTabID = tab.id } label: {
                 HStack(spacing: 7) {
                     Image(systemName: tab.bucket == nil ? "externaldrive" : "folder").foregroundStyle(.orange)
-                    Text(tab.title).lineLimit(1)
+                    Text(title).lineLimit(1)
                     Spacer(minLength: 0)
                 }
                 .padding(.leading, 12)
@@ -201,13 +220,13 @@ private struct TabButton: View {
                 .padding(.vertical, 10)
                 .frame(minWidth: 130, maxWidth: 190, alignment: .leading)
                 .contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityLabel(tab.title).accessibilityValue(selected ? "Selected" : "")
+            }.buttonStyle(.plain).accessibilityLabel(title).accessibilityValue(selected ? "Selected" : "")
             if model.tabs.count > 1 {
                 Button { model.closeTab(tab) } label: {
                     Image(systemName: "xmark").font(.system(size: 9, weight: .semibold))
                         .frame(width: 24, height: 24).contentShape(Rectangle())
                 }.buttonStyle(TabCloseButtonStyle()).padding(.trailing, 5)
-                    .help("Close tab").accessibilityLabel("Close \(tab.title)")
+                    .help("Close tab").accessibilityLabel("Close \(title)")
             }
         }.font(.callout)
             .background(selected ? Color(nsColor: .controlBackgroundColor) : hovered ? Color.primary.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: 7))
@@ -273,10 +292,6 @@ struct FolderView: View {
                         } else {
                             Button("Quick Look") { model.previewFile(item, tab: tab) }.disabled(model.busy)
                             Button("Rename…") { renameItem = item; name = item.name; showName = true }.disabled(model.busy)
-                        }
-                        Button("Copy R2 Path") {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString("s3://\(tab.bucket ?? "")/\(item.key)", forType: .string)
                         }
                     }
                     if !items.isEmpty {

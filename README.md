@@ -24,10 +24,11 @@ The app has a local signature. It is not notarized for public distribution.
 - Drop files or folders into the file list to upload them. **⌘U** also opens Upload.
 - Select files or folders and press **⌘D** to download them.
 - Use the folder button next to Search to create a folder.
-- Right-click a file to rename it or copy its R2 path.
+- Right-click a file to rename it.
 - Press **⌘R** to refresh. Press **⌘↑** to open the parent folder.
 - Press **⌘Delete** to delete selected files. The app asks first.
-- Press **⌘J** to see transfers. Use **Stop** to cancel the current operation.
+- Press **⌘J**, or select the right sidebar button, to show or hide Transfers.
+  Drag the divider to resize it. Use **Stop** to cancel the current operation.
 - Search checks file names in the current folder.
 
 Each tab keeps its own bucket, folder, search text, and selection. Select any part of a tab
