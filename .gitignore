@@ -1,4 +1,27 @@
+# Build output and compiler caches
 .build/
+.swiftpm/
 dist/
+DerivedData/
+
+# macOS and editor state
 .DS_Store
 *.xcuserstate
+xcuserdata/
+.idea/
+
+# Local secrets and signing files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+*.provisionprofile
+
+# Local logs and temporary files
+*.log
+*.swp
+*.swo

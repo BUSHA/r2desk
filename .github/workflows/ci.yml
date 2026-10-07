@@ -1,0 +1,58 @@
+name: Build and checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and checks (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check scripts and metadata
+        run: |
+          bash -n scripts/build-app.sh scripts/test.sh scripts/swift-env.sh
+          plutil -lint scripts/Info.plist
+      - name: Run core checks
+        run: bash scripts/test.sh
+      - name: Build app package
+        run: bash scripts/build-app.sh
+      - name: Verify package and make checksum
+        run: |
+          codesign --verify --strict --verbose=2 "dist/R2 Desk.app"
+          unzip -tq dist/R2-Desk.zip
+          cd dist
+          shasum -a 256 R2-Desk.zip > SHA256SUMS
+      - name: Save build artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: R2-Desk-${{ matrix.arch }}
+          path: |
+            dist/R2-Desk.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14

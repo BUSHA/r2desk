@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest a focused improvement.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What task is difficult now?
+      description: Explain the task and who needs it.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Suggested change
+      description: Describe the expected app behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Other options you considered

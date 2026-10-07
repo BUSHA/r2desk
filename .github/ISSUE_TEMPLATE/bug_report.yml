@@ -1,0 +1,46 @@
+name: Bug report
+description: Report an app problem with clear steps.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove access keys, account IDs, and private file names from all text and screenshots.
+        For a security issue, use the process in SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: App version or commit
+      placeholder: 1.2.2
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: macOS version and Mac processor
+      placeholder: macOS 15, Apple silicon
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to repeat the issue
+      description: Use sample bucket and file names.
+      placeholder: |
+        1. Open a bucket.
+        2. Select a file.
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: Include the error message or a screenshot after you remove private data.
+    validations:
+      required: true
