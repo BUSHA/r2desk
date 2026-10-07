@@ -32,4 +32,4 @@ and mock responses. R2 access is not needed in CI.
 If a key was exposed, revoke it in Cloudflare and create a new key. Remove the exposed
 key from all public content. Deleting the latest file does not remove Git history.
 
-Read the [README limits](README.md#current-limits) before changing important files.
+Read the [README limits](README.md#limitations) before changing important files.
