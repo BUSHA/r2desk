@@ -432,7 +432,6 @@ final class AppModel: ObservableObject {
     func deleteSelection() {
         guard let tab = current, !tab.selectedItems.isEmpty else { return }
         let selected = tab.selectedItems
-        let location = tab.prefix
         let bucket = tab.bucket ?? ""
         run("Delete files", tab: tab) { [self] client in
             var keys = Set(selected.map(\.key))
@@ -440,8 +439,19 @@ final class AppModel: ObservableObject {
                 let contents = try await client.list(prefix: folder.key, recursive: true)
                 keys.formUnion(contents.map(\.key))
             }
-            let detail = "Bucket: \(bucket)\nFolder: /\(location)\n\nThis deletes up to \(keys.count) files and folder records, including files inside selected folders. R2 has no Trash."
-            guard confirm("Delete selected files?", detail: detail, action: "Delete") else { throw CancellationError() }
+            let title: String
+            let targets: String
+            if selected.count == 1, let item = selected.first {
+                title = item.isFolder ? "Delete folder?" : "Delete file?"
+                targets = "Delete \(item.isFolder ? "folder" : "file"): /\(item.key)"
+            } else {
+                title = "Delete selected items?"
+                let paths = selected.prefix(5).map { "/\($0.key)" }.joined(separator: "\n")
+                let remaining = selected.count > 5 ? "\n…and \(selected.count - 5) more selected items." : ""
+                targets = "Delete \(selected.count) selected items:\n\(paths)\(remaining)"
+            }
+            let detail = "Bucket: \(bucket)\n\(targets)\n\nThis deletes up to \(keys.count) files and folder records. Files inside selected folders are included. R2 has no Trash."
+            guard confirm(title, detail: detail, action: "Delete") else { throw CancellationError() }
             let ordered = keys.sorted { $0.count > $1.count }
             for (index, key) in ordered.enumerated() {
                 try Task.checkCancellation(); status = "Delete \(index + 1) of \(ordered.count)"
