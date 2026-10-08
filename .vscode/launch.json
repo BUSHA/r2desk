@@ -4,7 +4,7 @@
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder:r2desk}",
             "name": "Debug R2 Desk",
             "target": "R2Desk",
             "configuration": "debug",
@@ -14,7 +14,7 @@
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder:r2desk}",
             "name": "Release R2 Desk",
             "target": "R2Desk",
             "configuration": "release",
@@ -24,7 +24,7 @@
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder:r2desk}",
             "name": "Debug R2CoreChecks",
             "target": "R2CoreChecks",
             "configuration": "debug",
@@ -34,11 +34,51 @@
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder:r2desk}",
             "name": "Release R2CoreChecks",
             "target": "R2CoreChecks",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release R2CoreChecks"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:r2desk}",
+            "name": "Debug R2Desk",
+            "target": "R2Desk",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug R2Desk"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:r2desk}",
+            "name": "Release R2Desk",
+            "target": "R2Desk",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release R2Desk"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:r2desk}",
+            "name": "Debug R2FinderChecks",
+            "target": "R2FinderChecks",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug R2FinderChecks"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:r2desk}",
+            "name": "Release R2FinderChecks",
+            "target": "R2FinderChecks",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release R2FinderChecks"
         }
     ]
 }
