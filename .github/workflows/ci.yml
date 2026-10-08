@@ -1,4 +1,5 @@
 name: Build and checks
+run-name: Build and checks
 
 on:
   push:
