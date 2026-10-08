@@ -4,6 +4,7 @@ This file starts with the current app version. Earlier development builds are no
 
 ## Unreleased
 
+- Automatic Apple silicon and Intel app uploads when a GitHub release is published.
 - Public repo documentation, screenshot, and MIT license.
 - Contribution and security guides, issue forms, and a pull request template.
 - CI build and checks for Apple silicon and Intel, with pinned actions.

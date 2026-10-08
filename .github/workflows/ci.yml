@@ -35,7 +35,7 @@ jobs:
           persist-credentials: false
       - name: Check scripts and metadata
         run: |
-          bash -n scripts/build-app.sh scripts/test.sh scripts/swift-env.sh
+          bash -n scripts/build-app.sh scripts/package-release.sh scripts/test.sh scripts/swift-env.sh
           plutil -lint scripts/Info.plist
       - name: Run core checks
         run: bash scripts/test.sh

@@ -41,6 +41,10 @@ To install, drag `dist/R2 Desk.app` to Applications. The build script also creat
 `dist/R2-Desk.zip`. Each build targets the processor of the Mac used to build it.
 Builds use an ad hoc signature and are not notarized.
 
+When a GitHub release is published, Actions builds separate Apple silicon and
+Intel ZIP files. It attaches both packages and their SHA-256 checksums to the
+release. See the [release guide](docs/RELEASING.md) for the steps.
+
 ## Connect to R2
 
 1. [Create an R2 API token](https://developers.cloudflare.com/r2/api/tokens/) with

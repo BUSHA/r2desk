@@ -16,7 +16,8 @@ The local files are ready for review. Publishing and GitHub settings are separat
 
 The workflow has read-only repository permissions. Actions use fixed commit IDs.
 Dependabot checks those pins each week. It uses `pull_request` with no repo secrets.
-CI does not deploy or publish a release.
+CI does not publish a release. The separate `Build release` workflow has write
+permission. It attaches app packages to an existing published release.
 
 ## Release steps
 
@@ -25,17 +26,41 @@ CI does not deploy or publish a release.
 3. Run `bash scripts/test.sh` and `bash scripts/build-app.sh` from a clean checkout.
 4. Confirm CI passes on both architectures. Check the UI and file operations with
    disposable files in a test bucket. Never put R2 keys in CI secrets for these checks.
-5. For public distribution, sign the app with a Developer ID certificate and the
-   hardened runtime. Submit it to Apple's notarization service and staple the ticket.
-   Follow [Apple's distribution guide](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
-6. Recreate the zip after signing and stapling. Keep the app bundle structure and executable permissions.
-7. Verify the signature and notarization. Generate a SHA-256 checksum for each final zip.
-8. Create a version tag and release with the changelog notes, architecture-specific
-   packages, and checksums. These are manual publishing steps.
+5. Push the source changes, including `.github/workflows/release.yml`, to the default branch.
+6. Create a version tag at that commit. The tag must match the app version in
+   `scripts/Info.plist`. For version `1.2.2`, use `v1.2.2`.
+7. Create a GitHub release for that tag. Add the changelog notes and state that the
+   apps use an ad hoc signature and are not notarized. Publish the release through
+   the GitHub website or your local `gh` login.
+8. Check the `Build release` workflow. Both jobs must pass. Each job checks the
+   version, runs the core checks, builds the app, verifies its signature and CPU,
+   and attaches a ZIP file and SHA-256 checksum to the release.
+
+For version `1.2.2`, the release gets these files:
+
+- `R2-Desk-1.2.2-arm64.zip` and `R2-Desk-1.2.2-arm64.zip.sha256`.
+- `R2-Desk-1.2.2-x86_64.zip` and `R2-Desk-1.2.2-x86_64.zip.sha256`.
+
+The workflow starts on `release: published`, like Keywheel. Saving a draft does
+not start it. The release is visible before the app uploads finish. If a job fails,
+fix the cause and rerun the failed job. An upload replaces existing files with the
+same names. The workflow uses GitHub's automatic token. No personal token or R2
+access keys are needed in repository secrets.
+
+To make the same package locally after a build, run:
+
+```sh
+bash scripts/package-release.sh
+```
 
 The current build script uses an ad hoc signature. It does not use Developer ID,
 notarization credentials, or a universal binary. CI artifacts are separate host builds.
-Do not label them as notarized or as release packages before those steps are complete.
+Do not label these apps as notarized.
+
+Developer ID signing and notarization need a separate build setup. To add that
+support, follow [Apple's distribution guide](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+Recreate the ZIP files after signing and stapling. Verify notarization and generate
+new checksums for the final ZIP files.
 
 ## Screenshot
 
