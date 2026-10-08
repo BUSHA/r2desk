@@ -16,7 +16,7 @@ case "$arch" in
     arm64|x86_64) ;;
     *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
 esac
-if [ "$(lipo -archs "$app_dir/Contents/MacOS/R2Man")" != "$arch" ]; then
+if [ "$(lipo -archs "$app_dir/Contents/MacOS/R2Desk")" != "$arch" ]; then
     echo "App CPU does not match $arch" >&2
     exit 1
 fi

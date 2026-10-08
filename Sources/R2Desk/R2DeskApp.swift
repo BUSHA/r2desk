@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 @main
-struct R2ManApp: App {
+struct R2DeskApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var model = AppModel()
     var body: some Scene {

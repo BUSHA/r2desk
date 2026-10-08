@@ -4,6 +4,7 @@ This file starts with the current app version. Earlier development builds are no
 
 ## Unreleased
 
+- Use R2Desk for the Swift app target, executable, and source folder.
 - Automatic Apple silicon and Intel app uploads when a GitHub release is published.
 - Public repo documentation, screenshot, and MIT license.
 - Contribution and security guides, issue forms, and a pull request template.

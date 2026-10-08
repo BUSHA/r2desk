@@ -21,7 +21,7 @@ For documentation changes, check local links and commands. A full app test is no
 | Path | Purpose |
 | --- | --- |
 | `Sources/R2Core/` | R2 requests, SigV4 signing, XML parsing, models, safe paths, and saved tab state |
-| `Sources/R2Man/` | SwiftUI views, app state, transfers, Quick Look, and Keychain access |
+| `Sources/R2Desk/` | SwiftUI views, app state, transfers, Quick Look, and Keychain access |
 | `Tests/R2CoreTests/` | Standalone check runner with synthetic data and mock HTTP responses |
 | `scripts/` | Build, checks, SDK selection, app metadata, and icon tools |
 | `Assets/` | App icons and their creation notes |

@@ -5,20 +5,20 @@
             "request": "launch",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "name": "Debug R2Man",
-            "target": "R2Man",
+            "name": "Debug R2 Desk",
+            "target": "R2Desk",
             "configuration": "debug",
-            "preLaunchTask": "swift: Build Debug R2Man"
+            "preLaunchTask": "swift: Build Debug R2Desk"
         },
         {
             "type": "swift",
             "request": "launch",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "name": "Release R2Man",
-            "target": "R2Man",
+            "name": "Release R2 Desk",
+            "target": "R2Desk",
             "configuration": "release",
-            "preLaunchTask": "swift: Build Release R2Man"
+            "preLaunchTask": "swift: Build Release R2Desk"
         },
         {
             "type": "swift",
