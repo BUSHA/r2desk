@@ -353,6 +353,23 @@ struct S3ClientTests {
         try await storage.download(key: "remote.txt", to: file, replaceExisting: true, progress: { _ in })
         expectEqual(try String(contentsOf: file), "download body")
     }
+    func testFinderDownloadPinsVersionAndKeepsLocalFileOnChange() async throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try Data("keep local".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        MockURLProtocol.handler = { request in
+            expectEqual(request.value(forHTTPHeaderField: "If-Match"), "\"listed-version\"")
+            expectTrue(request.value(forHTTPHeaderField: "Authorization")?.contains("if-match") == true)
+            return (412, [:], "<Error><Code>PreconditionFailed</Code></Error>")
+        }
+        do {
+            try await client().download(key: "remote.txt", to: file, replaceExisting: true, expectedETag: "\"listed-version\"")
+            Issue.record("A changed file was downloaded as the listed version.")
+        } catch {
+            if case StorageError.response(412, _) = error {} else { Issue.record("Unexpected version error.") }
+        }
+        expectEqual(try String(contentsOf: file), "keep local")
+    }
     func testDownloadErrorKeepsLocalFile() async throws {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try Data("keep local".utf8).write(to: file)
@@ -421,6 +438,7 @@ private enum Issue { static func record(_ text: String) { Results.shared.record(
             ("testCreateFolderUsesConditionalEmptyPut", { try await s3.testCreateFolderUsesConditionalEmptyPut() }),
             ("testUploadUsesSignedPayloadAndNoOverwriteCondition", { try await s3.testUploadUsesSignedPayloadAndNoOverwriteCondition() }),
             ("testDownloadWritesBytesAndRequiresReplacementApproval", { try await s3.testDownloadWritesBytesAndRequiresReplacementApproval() }),
+            ("testFinderDownloadPinsVersionAndKeepsLocalFileOnChange", { try await s3.testFinderDownloadPinsVersionAndKeepsLocalFileOnChange() }),
             ("testDownloadErrorKeepsLocalFile", { try await s3.testDownloadErrorKeepsLocalFile() }),
         ]
         for (name, check) in checks {

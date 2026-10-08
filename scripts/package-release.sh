@@ -9,7 +9,7 @@ if [ ! -d "$app_dir" ]; then
     exit 1
 fi
 
-codesign --verify --strict --verbose=2 "$app_dir"
+codesign --verify --deep --strict --verbose=2 "$app_dir"
 version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_dir/Contents/Info.plist")
 arch="${EXPECTED_ARCH:-$(uname -m)}"
 case "$arch" in
@@ -18,6 +18,11 @@ case "$arch" in
 esac
 if [ "$(lipo -archs "$app_dir/Contents/MacOS/R2Desk")" != "$arch" ]; then
     echo "App CPU does not match $arch" >&2
+    exit 1
+fi
+extension_dir="$app_dir/Contents/PlugIns/R2DeskFileProvider.appex"
+if [ ! -d "$extension_dir" ] || [ "$(lipo -archs "$extension_dir/Contents/MacOS/R2DeskFileProvider")" != "$arch" ]; then
+    echo "Finder extension is missing or its CPU does not match $arch" >&2
     exit 1
 fi
 if [ -n "${RELEASE_TAG:-}" ] && [ "$RELEASE_TAG" != "v$version" ]; then

@@ -35,6 +35,8 @@ struct MainView: View {
                 }
             }
             ToolbarItemGroup(placement: .primaryAction) {
+                Button { model.showFinderDrives = true } label: { Image(systemName: "externaldrive").frame(width: 22, height: 22) }
+                    .help("Finder drives").accessibilityLabel("Finder Drives")
                 if model.current != nil {
                     if model.current?.bucket != nil {
                     Button(action: model.chooseUpload) { Label("Upload", systemImage: "arrow.up.doc") }
@@ -42,10 +44,13 @@ struct MainView: View {
                     Button(action: model.downloadSelection) { Label("Download", systemImage: "arrow.down.doc") }
                         .disabled(model.busy || model.current?.selectedItems.isEmpty != false).help("Download")
                     }
-                    Button { model.reload() } label: { Image(systemName: "arrow.clockwise") }.help("Refresh")
-                    Button { model.showTransfers.toggle() } label: { Image(systemName: "list.bullet.rectangle") }.help("Transfers")
+                    Button { model.reload() } label: { Image(systemName: "arrow.clockwise").frame(width: 22, height: 22) }.help("Refresh")
+                    Button { model.showTransfers.toggle() } label: { Image(systemName: "list.bullet.rectangle").frame(width: 22, height: 22) }.help("Transfers")
                 }
             }
+        }
+        .sheet(isPresented: $model.showFinderDrives) {
+            FinderDrivesView(manager: model.finder)
         }
         .sheet(isPresented: $model.showConnection) {
             ConnectionView(existing: model.editingConnection).environmentObject(model)

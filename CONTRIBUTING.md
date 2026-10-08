@@ -22,16 +22,24 @@ For documentation changes, check local links and commands. A full app test is no
 | --- | --- |
 | `Sources/R2Core/` | R2 requests, SigV4 signing, XML parsing, models, safe paths, and saved tab state |
 | `Sources/R2Desk/` | SwiftUI views, app state, transfers, Quick Look, and Keychain access |
+| `Sources/R2FileProvider/` | Finder items, enumeration, on-demand downloads, and writes |
+| `Sources/R2FinderShared/` | Domain configuration and restricted XPC interface |
 | `Tests/R2CoreTests/` | Standalone check runner with synthetic data and mock HTTP responses |
+| `Tests/R2FinderTests/` | Finder catalog, identity, authentication, and mock write checks |
 | `scripts/` | Build, checks, SDK selection, app metadata, and icon tools |
 | `Assets/` | App icons and their creation notes |
 | `docs/` | Screenshot and release guide |
 
-The check runner is an executable target named `R2CoreChecks`. Use `scripts/test.sh`;
+The check runners are executable targets named `R2CoreChecks` and `R2FinderChecks`. Use `scripts/test.sh`;
 `swift test` does not run these checks. There are no third-party Swift packages.
 
 The scripts keep compiler caches in `.build`. Use `R2DESK_SDK_PATH` if you need to
 select a specific installed SDK. Build output goes to `dist`.
+
+`build-app.sh` builds and signs the embedded Finder extension before it signs the app.
+Use the packaged app for live Finder checks. `swift run R2Desk` cannot register the
+extension. The extension stores credentials in its own Keychain. The app sends them
+through a restricted File Provider XPC service. Catalog files contain metadata only.
 
 ## Keep changes safe
 

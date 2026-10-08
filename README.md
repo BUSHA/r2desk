@@ -21,6 +21,7 @@
 - Search the current folder and sort by name, size, or modification date.
 - View transfer progress and results in a resizable sidebar.
 - Store access keys in macOS Keychain.
+- Add buckets to Finder. Download files on demand and upload saved edits.
 
 ## Build and install
 
@@ -71,6 +72,26 @@ bucket list. Right-click a connection to edit or remove it.
 Drop files into the file list to upload them. Select items and click **Download**
 to save them locally. The **Transfers** button toggles the right sidebar.
 
+### Finder drives
+
+1. Open the built `R2 Desk.app`. Finder drives need the embedded File Provider extension.
+2. Right-click a bucket. Select **Add to Finder**.
+3. Enable R2 Desk in macOS File Provider settings if requested.
+4. Open the drive in Finder. Open a file to download it. Save edits to upload them.
+
+Finder also supports uploads, new folders, rename, move, and delete. Use write access
+keys for these operations. Deletion permanently removes the objects from R2.
+Use the drive button in the toolbar to open or remove a drive. Removal keeps the
+R2 objects. macOS preserves local files with changes that have not uploaded.
+
+Keep R2 Desk open to refresh changes made by other clients. The app checks visited
+folders each minute. Access keys stay in Keychain, including the extension's own
+Keychain. Mount settings and file metadata stay on your Mac.
+
+Each drive uses the bucket name. macOS can still show **R2 Desk** for a single
+drive. With multiple drives, macOS includes the bucket names. This is a
+[macOS naming limit](https://developer.apple.com/forums/thread/737617).
+
 | Shortcut | Action |
 | --- | --- |
 | `⌘T` | New tab |
@@ -87,11 +108,17 @@ to save them locally. The **Transfers** button toggles the right sidebar.
 ## Limitations
 
 - Upload and file rename support files up to **5 GiB**. Multipart uploads and transfer resume are not supported.
-- Folders can be uploaded, downloaded, created, and deleted, but not renamed.
-- Quick Look downloads a temporary copy. Local edits do not sync to R2, and buckets are not mounted as disks.
+- The app cannot rename folders. Finder drives can rename and move folders.
+- Quick Look in the app downloads a temporary copy. To upload saved edits, use Finder drives.
+- Finder drives use macOS File Provider. They are not block devices or FUSE mounts.
+- Finder cannot represent object names that differ only by case or Unicode normalization.
+  It also cannot represent a file and folder with the same name. Use the app for these buckets.
 - Rename copies the file, then deletes the source. The operation is not atomic.
   Avoid renaming a file while another client writes to it.
-- R2 has no Trash. Deletion and file replacement require confirmation.
+- Avoid concurrent edits during Finder moves and deletes. Source checks reduce conflicts,
+  but the final check and deletion are not atomic. Failed moves can leave copied files.
+- R2 has no Trash. The app requests confirmation for deletion and file replacement.
+  Finder uses its own confirmation controls.
   Completed changes remain if an operation stops or fails.
 - Folder and multiple-file downloads require a destination with no files at the same paths.
   Single-file downloads use the macOS Save dialog.

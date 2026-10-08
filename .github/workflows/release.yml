@@ -52,9 +52,9 @@ jobs:
           fi
       - name: Check scripts and metadata
         run: |
-          bash -n scripts/build-app.sh scripts/package-release.sh scripts/test.sh scripts/swift-env.sh
-          plutil -lint scripts/Info.plist
-      - name: Run core checks
+          bash -n scripts/build-app.sh scripts/build-finder-extension.sh scripts/package-release.sh scripts/test.sh scripts/swift-env.sh
+          plutil -lint scripts/Info.plist scripts/FinderExtension-Info.plist scripts/FinderExtension.entitlements
+      - name: Run core and Finder checks
         run: bash scripts/test.sh
       - name: Build app
         run: bash scripts/build-app.sh

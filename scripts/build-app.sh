@@ -13,6 +13,7 @@ mv -f "$app_dir/Contents/MacOS/R2Desk.new" "$app_dir/Contents/MacOS/R2Desk"
 cp scripts/Info.plist "$app_dir/Contents/Info.plist"
 cp Assets/AppIcon.png "$app_dir/Contents/Resources/AppIcon.png"
 cp Assets/AppIcon.icns "$app_dir/Contents/Resources/AppIcon.icns"
-codesign --force --sign - --identifier com.busha.r2desk "$app_dir"
+bash scripts/build-finder-extension.sh
+codesign --force --sign "${R2DESK_SIGNING_IDENTITY:--}" --identifier com.busha.r2desk "$app_dir"
 ditto -c -k --sequesterRsrc --keepParent "$app_dir" "$PWD/dist/R2-Desk.zip"
 printf 'App ready: %s\n' "$app_dir"

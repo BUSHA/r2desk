@@ -37,6 +37,11 @@ struct BucketView: View {
                 }
                 .contextMenu(forSelectionType: String.self) { ids in
                     if let bucket = tab.visibleBuckets.first(where: { ids.contains($0.name) }), ids.count == 1 {
+                        if model.finder.contains(connectionID: tab.connectionID, bucket: bucket.name) {
+                            Button("Open in Finder") { model.openInFinder(bucket: bucket.name, connectionID: tab.connectionID) }
+                        } else {
+                            Button("Add to Finder") { model.addToFinder(bucket: bucket.name, connectionID: tab.connectionID) }
+                        }
                         Button("Open Bucket") { model.openBucket(bucket, tab: tab) }
                         Button("Open in New Tab") { model.openTab(connectionID: tab.connectionID, location: .folder(bucket: bucket.name, prefix: "")) }
                     }

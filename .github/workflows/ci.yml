@@ -36,15 +36,15 @@ jobs:
           persist-credentials: false
       - name: Check scripts and metadata
         run: |
-          bash -n scripts/build-app.sh scripts/package-release.sh scripts/test.sh scripts/swift-env.sh
-          plutil -lint scripts/Info.plist
-      - name: Run core checks
+          bash -n scripts/build-app.sh scripts/build-finder-extension.sh scripts/package-release.sh scripts/test.sh scripts/swift-env.sh
+          plutil -lint scripts/Info.plist scripts/FinderExtension-Info.plist scripts/FinderExtension.entitlements
+      - name: Run core and Finder checks
         run: bash scripts/test.sh
       - name: Build app package
         run: bash scripts/build-app.sh
       - name: Verify package and make checksum
         run: |
-          codesign --verify --strict --verbose=2 "dist/R2 Desk.app"
+          codesign --verify --deep --strict --verbose=2 "dist/R2 Desk.app"
           unzip -tq dist/R2-Desk.zip
           cd dist
           shasum -a 256 R2-Desk.zip > SHA256SUMS

@@ -33,7 +33,7 @@ permission. It attaches app packages to an existing published release.
    apps use an ad hoc signature and are not notarized. Publish the release through
    the GitHub website or your local `gh` login.
 8. Check the `Build release` workflow. Both jobs must pass. Each job checks the
-   version, runs the core checks, builds the app, verifies its signature and CPU,
+   version, runs the core and Finder checks, builds the app, verifies app and extension signatures and CPUs,
    and attaches an app ZIP file to the release. Checksums are used for package checks.
 
 For version `1.2.2`, the release gets these files:
@@ -53,7 +53,9 @@ To make the same package locally after a build, run:
 bash scripts/package-release.sh
 ```
 
-The current build script uses an ad hoc signature. It does not use Developer ID,
+The current build script uses an ad hoc signature for the app and Finder extension.
+Set `R2DESK_SIGNING_IDENTITY` to use an installed signing identity for both bundles.
+The script does not set up Developer ID certificates,
 notarization credentials, or a universal binary. CI artifacts are separate host builds.
 Do not label these apps as notarized.
 

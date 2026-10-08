@@ -88,7 +88,7 @@ struct ConnectionView: View {
                 let client = S3Client(connection: connection, credentials: credentials)
                 let buckets = try await client.listBuckets()
                 try Task.checkCancellation()
-                try model.saveConnection(connection, credentials: credentials, client: client, buckets: buckets)
+                try await model.saveConnection(connection, credentials: credentials, client: client, buckets: buckets)
                 dismiss()
             } catch {
                 if !Task.isCancelled { self.error = error.localizedDescription }

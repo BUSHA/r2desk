@@ -100,6 +100,9 @@ final class AppModel: ObservableObject {
     @Published var activeTabID: UUID? { didSet { saveSession() } }
     @Published var showConnection = false
     @Published var editingConnection: Connection?
+    let finder = FinderDriveManager()
+    @Published var showFinderDrives = false
+    private var finderObserver: AnyCancellable?
     @Published var showTransfers = false
     @Published var busy = false
     @Published var status = "Ready"
@@ -125,6 +128,7 @@ final class AppModel: ObservableObject {
         S3Client(connection: $0, bucket: $1, credentials: $2)
     }) {
         self.clientFactory = clientFactory
+        finderObserver = finder.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
         if let data = UserDefaults.standard.data(forKey: preferencesKey),
            let saved = try? JSONDecoder().decode([Connection].self, from: data) { connections = saved }
         if let data = UserDefaults.standard.data(forKey: sessionKey),
@@ -209,13 +213,15 @@ final class AppModel: ObservableObject {
         guard let tab = current, let parent = tab.location.parent else { return }
         navigate(parent, tab: tab)
     }
-    func saveConnection(_ connection: Connection, credentials: Credentials, client: S3Client, buckets: [RemoteBucket]) throws {
+    func saveConnection(_ connection: Connection, credentials: Credentials, client: S3Client, buckets: [RemoteBucket]) async throws {
+        try await finder.validateEdit(connection)
         try Keychain.save(credentials, for: connection.id)
         if let index = connections.firstIndex(where: { $0.id == connection.id }) { connections[index] = connection }
         else { connections.append(connection) }
         clients = clients.filter { $0.key.connectionID != connection.id }
         clients[ClientKey(connectionID: connection.id, bucket: nil)] = client
         UserDefaults.standard.set(try JSONEncoder().encode(connections), forKey: preferencesKey)
+        Task { await finder.refresh() }
         for tab in tabs where tab.connectionID == connection.id { reload(tab) }
         if let tab = tabs.first(where: { $0.connectionID == connection.id && $0.bucket == nil }) {
             tab.showBuckets(buckets); activeTabID = tab.id
@@ -223,14 +229,31 @@ final class AppModel: ObservableObject {
     }
     func removeConnection(_ connection: Connection) {
         guard !busy, confirm("Remove \(connection.name)?", detail: "This removes the saved connection and its keys. Your R2 files stay in the bucket.", action: "Remove") else { return }
-        do {
+        Task {
+          do {
+            try await finder.remove(connectionID: connection.id)
             try Keychain.remove(connection.id)
             connections.removeAll { $0.id == connection.id }; clients = clients.filter { $0.key.connectionID != connection.id }
             for tab in tabs where tab.connectionID == connection.id { tab.close(); tabObservers.removeValue(forKey: tab.id) }
             tabs.removeAll { $0.connectionID == connection.id }
             UserDefaults.standard.set(try JSONEncoder().encode(connections), forKey: preferencesKey)
             if !tabs.contains(where: { $0.id == activeTabID }) { activeTabID = tabs.first?.id }
-        } catch { alert = error.localizedDescription }
+          } catch { alert = error.localizedDescription }
+        }
+    }
+    func addToFinder(bucket: String, connectionID: UUID) {
+        guard let connection = connection(connectionID) else { return }
+        showFinderDrives = true
+        Task {
+            do { try await finder.add(connection: connection, bucket: bucket) }
+            catch { finder.error = error.localizedDescription }
+        }
+    }
+    func openInFinder(bucket: String, connectionID: UUID) {
+        Task {
+            do { try await finder.open(connectionID: connectionID, bucket: bucket) }
+            catch { finder.error = error.localizedDescription; showFinderDrives = true }
+        }
     }
     func edit(_ connection: Connection) {
         editingConnection = connection; showConnection = true

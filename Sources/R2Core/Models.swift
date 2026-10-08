@@ -52,7 +52,7 @@ public struct Credentials: Codable, Sendable {
     }
 }
 
-public struct RemoteItem: Identifiable, Hashable, Sendable {
+public struct RemoteItem: Codable, Identifiable, Hashable, Sendable {
     public var id: String { key }
     public let key: String
     public let isFolder: Bool

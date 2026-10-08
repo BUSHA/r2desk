@@ -117,6 +117,10 @@ public struct S3Client: StorageService {
 
     public func upload(file: URL, key: String, replacingETag: String? = nil,
                        progress: @escaping TransferProgress = { _ in }) async throws {
+        _ = try await uploadResult(file: file, key: key, replacingETag: replacingETag, progress: progress)
+    }
+
+    private func uploadResult(file: URL, key: String, replacingETag: String?, progress: @escaping TransferProgress) async throws -> String? {
         let size = try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
         guard size <= 5 * 1024 * 1024 * 1024 else {
             throw StorageError.message("This version can upload files up to 5 GiB. Select a smaller file.")
@@ -131,12 +135,27 @@ public struct S3Client: StorageService {
         else { headers["if-none-match"] = "*" }
         let request = try request("PUT", key: key, headers: headers, hash: hash)
         let (data, response) = try await session.upload(for: request, fromFile: file, delegate: TransferDelegate(progress))
-        _ = try validate(response, data: data)
+        let http = try validate(response, data: data)
         progress(1)
+        return http.value(forHTTPHeaderField: "ETag")
+    }
+
+    public func uploadForFinder(file: URL, key: String, replacingETag: String? = nil, progress: @escaping TransferProgress = { _ in }) async throws -> RemoteItem {
+        guard let etag = try await uploadResult(file: file, key: key, replacingETag: replacingETag, progress: progress) else {
+            throw StorageError.message("R2 returned no upload checksum. Refresh the Finder drive.")
+        }
+        return try await metadata(key: key, expectedETag: etag)
     }
 
     public func download(key: String, to destination: URL, replaceExisting: Bool, progress: @escaping TransferProgress = { _ in }) async throws {
-        let (temporary, response) = try await session.download(for: request("GET", key: key), delegate: TransferDelegate(progress))
+        try await download(key: key, to: destination, replaceExisting: replaceExisting, expectedETag: nil, progress: progress)
+    }
+
+    /// Pin Finder downloads to the listed version. A changed object must not become stale local content.
+    public func download(key: String, to destination: URL, replaceExisting: Bool, expectedETag: String?,
+                         progress: @escaping TransferProgress = { _ in }) async throws {
+        let headers = expectedETag.map { ["if-match": $0] } ?? [:]
+        let (temporary, response) = try await session.download(for: request("GET", key: key, headers: headers), delegate: TransferDelegate(progress))
         defer { try? FileManager.default.removeItem(at: temporary) }
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             _ = try validate(response, data: (try? Data(contentsOf: temporary)) ?? Data())
@@ -190,5 +209,90 @@ public struct S3Client: StorageService {
             throw StorageError.message("The original file changed during rename. Both files were kept.")
         }
         try await delete(key: item.key)
+    }
+}
+
+public extension S3Client {
+    func metadata(key: String, expectedETag: String? = nil) async throws -> RemoteItem {
+        let headers = expectedETag.map { ["if-match": $0] } ?? [:]
+        let (data, response) = try await session.data(for: request("HEAD", key: key, headers: headers))
+        let http = try validate(response, data: data)
+        guard let etag = http.value(forHTTPHeaderField: "ETag"),
+              let sizeText = http.value(forHTTPHeaderField: "Content-Length"), let size = Int64(sizeText), size >= 0 else {
+            throw StorageError.message("R2 returned incomplete file details. Refresh the folder.")
+        }
+        let format = DateFormatter(); format.locale = Locale(identifier: "en_US_POSIX")
+        format.timeZone = TimeZone(secondsFromGMT: 0); format.dateFormat = "EEE, dd MMM yyyy HH:mm:ss z"
+        let modified = http.value(forHTTPHeaderField: "Last-Modified").flatMap { format.date(from: $0) }
+        return RemoteItem(key: key, isFolder: key.hasSuffix("/"), size: size, modified: modified, etag: etag)
+    }
+    private func copyForFinder(_ item: RemoteItem, to key: String) async throws {
+        guard item.size <= 5 * 1024 * 1024 * 1024, let etag = item.etag, let bucket else {
+            throw StorageError.message("Finder can move files up to 5 GiB. Use a smaller file.")
+        }
+        let source = "/" + S3Signer.encode(bucket) + "/" + S3Signer.encode(item.key, preserveSlashes: true)
+        let (data, response) = try await session.data(for: request("PUT", key: key, headers: [
+            "x-amz-copy-source": source, "x-amz-copy-source-if-match": etag, "cf-copy-destination-if-none-match": "*"
+        ]))
+        _ = try validate(response, data: data)
+    }
+    /// R2 moves are copy/delete operations. Recheck source versions before deleting any source.
+    func moveForFinder(item: RemoteItem, to key: String) async throws {
+        try FinderIdentity.validate(key)
+        guard item.key != key else { return }
+        if !item.isFolder {
+            guard let etag = item.etag else { throw StorageError.message("The file has no checksum. Refresh the folder.") }
+            let source = try await metadata(key: item.key, expectedETag: etag)
+            try await copyForFinder(source, to: key)
+            _ = try await metadata(key: item.key, expectedETag: etag)
+            _ = try await metadata(key: key, expectedETag: etag)
+            try await delete(key: item.key)
+            return
+        }
+        guard key.hasSuffix("/"), !key.hasPrefix(item.key) else { throw StorageError.message("A folder cannot be moved inside itself.") }
+        let source = try await list(prefix: item.key, recursive: true)
+        for entry in source {
+            try FinderIdentity.validate(entry.key)
+            guard entry.size <= 5 * 1024 * 1024 * 1024, entry.etag != nil else {
+                throw StorageError.message("This folder has a file that Finder cannot move. Use R2 Desk to inspect it.")
+            }
+        }
+        let marker: RemoteItem?
+        do { marker = try await metadata(key: item.key) }
+        catch StorageError.response(404, _) { marker = nil }
+        guard try await list(prefix: key, recursive: true).isEmpty else { throw StorageError.response(412, "") }
+        try await createFolder(key: key)
+        // Finish every copy before deleting the first source. Failed copies leave source files intact.
+        for entry in source {
+            try Task.checkCancellation()
+            try await copyForFinder(entry, to: key + entry.key.dropFirst(item.key.count))
+        }
+        let current = try await list(prefix: item.key, recursive: true)
+        guard Set(current) == Set(source) else { throw StorageError.message("The folder changed during the move. Both folders were kept.") }
+        if let marker { _ = try await metadata(key: marker.key, expectedETag: marker.etag) }
+        for entry in source {
+            _ = try await metadata(key: entry.key, expectedETag: entry.etag)
+            _ = try await metadata(key: key + entry.key.dropFirst(item.key.count), expectedETag: entry.etag)
+        }
+        for entry in source { try Task.checkCancellation(); try await delete(key: entry.key) }
+        if let marker { try await delete(key: marker.key) }
+    }
+    func deleteForFinder(item: RemoteItem, recursive: Bool) async throws {
+        if !item.isFolder {
+            guard let etag = item.etag else { throw StorageError.message("The file has no checksum. Refresh the folder.") }
+            _ = try await metadata(key: item.key, expectedETag: etag)
+            try await delete(key: item.key)
+            return
+        }
+        let children = try await list(prefix: item.key, recursive: true)
+        guard recursive || children.isEmpty else { throw StorageError.message("The folder is not empty.") }
+        for entry in children {
+            guard let etag = entry.etag else { throw StorageError.message("A file has no checksum. Refresh the folder.") }
+            _ = try await metadata(key: entry.key, expectedETag: etag)
+        }
+        for entry in children { try Task.checkCancellation(); try await delete(key: entry.key) }
+        // The marker can be absent for an implied R2 folder.
+        do { _ = try await metadata(key: item.key); try await delete(key: item.key) }
+        catch StorageError.response(404, _) {}
     }
 }

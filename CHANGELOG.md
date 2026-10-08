@@ -4,6 +4,9 @@ This file starts with the current app version. Earlier development builds are no
 
 ## Unreleased
 
+- Finder drives with on-demand downloads, uploads, saved edits, and file and folder moves and deletion.
+- Stable Finder item IDs, durable change tracking, and Keychain access through restricted XPC.
+- Equal toolbar icon frames and a centered Finder drive symbol.
 - Use R2Desk for the Swift app target, executable, and source folder.
 - Automatic Apple silicon and Intel app uploads when a GitHub release is published.
 - Public repo documentation, screenshot, and MIT license.
