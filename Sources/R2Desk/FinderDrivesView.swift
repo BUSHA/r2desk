@@ -28,7 +28,6 @@ struct FinderDrivesView: View {
                                     Button("Open") { Task { do { try await manager.open(drive) } catch { manager.error = error.localizedDescription } } }
                                     Button("Remove…") { remove = drive }
                                 }.disabled(manager.pending.contains(drive.id))
-                                Text(drive.name).font(.caption).foregroundStyle(.secondary)
                                 if let message = manager.messages[drive.id] { Text(message).font(.callout).foregroundStyle(.orange) }
                             }
                         }
