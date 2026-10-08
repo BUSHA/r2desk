@@ -34,12 +34,12 @@ permission. It attaches app packages to an existing published release.
    the GitHub website or your local `gh` login.
 8. Check the `Build release` workflow. Both jobs must pass. Each job checks the
    version, runs the core checks, builds the app, verifies its signature and CPU,
-   and attaches a ZIP file and SHA-256 checksum to the release.
+   and attaches an app ZIP file to the release. Checksums are used for package checks.
 
 For version `1.2.2`, the release gets these files:
 
-- `R2-Desk-1.2.2-arm64.zip` and `R2-Desk-1.2.2-arm64.zip.sha256`.
-- `R2-Desk-1.2.2-x86_64.zip` and `R2-Desk-1.2.2-x86_64.zip.sha256`.
+- `R2-Desk-1.2.2-arm64.zip`.
+- `R2-Desk-1.2.2-x86_64.zip`.
 
 The workflow starts on `release: published`, like Keywheel. Saving a draft does
 not start it. The release is visible before the app uploads finish. If a job fails,

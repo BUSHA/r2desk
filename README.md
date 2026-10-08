@@ -42,7 +42,7 @@ To install, drag `dist/R2 Desk.app` to Applications. The build script also creat
 Builds use an ad hoc signature and are not notarized.
 
 When a GitHub release is published, Actions builds separate Apple silicon and
-Intel ZIP files. It attaches both packages and their SHA-256 checksums to the
+Intel ZIP files. It attaches both app packages to the
 release. See the [release guide](docs/RELEASING.md) for the steps.
 
 ## Connect to R2
