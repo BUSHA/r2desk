@@ -2,6 +2,11 @@
 
 This file starts with the current app version. Earlier development builds are not listed.
 
+## 1.2.5
+
+- Set the correct file type and inline display headers for PDF uploads. PDF links can open in the browser.
+- Use the saved object name to find the file type when Finder supplies a temporary file name.
+
 ## 1.2.4
 
 - Finder drives with on-demand downloads, uploads, saved edits, and file and folder moves and deletion.

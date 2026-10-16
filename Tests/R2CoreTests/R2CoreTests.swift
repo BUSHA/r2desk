@@ -320,6 +320,7 @@ struct S3ClientTests {
         MockURLProtocol.handler = { request in
             requests += 1
             expectEqual(request.httpMethod, "PUT")
+            expectNil(request.value(forHTTPHeaderField: "Content-Disposition"))
             expectEqual(request.value(forHTTPHeaderField: "x-amz-content-sha256"), S3Signer.hash(Data("upload body".utf8)))
             if requests == 1 {
                 expectEqual(request.value(forHTTPHeaderField: "if-none-match"), "*")
@@ -334,6 +335,52 @@ struct S3ClientTests {
         try await storage.upload(file: file, key: "new.txt", replacingETag: nil, progress: { _ in })
         try await storage.upload(file: file, key: "existing.txt", replacingETag: "\"previous\"", progress: { _ in })
         expectEqual(requests, 2)
+    }
+    func testPDFUploadsUseBrowserHeadersForAppAndFinder() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let body = Data("%PDF-1.7\n%%EOF\n".utf8)
+        let cases = [
+            (local: "report.pdf", key: "docs/report.pdf", finder: false, replacing: false),
+            (local: "temporary", key: "docs/report.pdf", finder: true, replacing: false),
+            (local: "temporary.tmp", key: "docs/report.pdf", finder: true, replacing: true),
+            (local: "temporary.txt", key: "docs/Report.PDF", finder: true, replacing: true),
+        ]
+        for entry in cases {
+            let file = folder.appendingPathComponent(entry.local)
+            try body.write(to: file)
+            var uploads = 0
+            var heads = 0
+            MockURLProtocol.handler = { request in
+                expectEqual(request.url?.path, "/test-bucket/" + entry.key)
+                if request.httpMethod == "HEAD" {
+                    heads += 1
+                    expectEqual(request.value(forHTTPHeaderField: "If-Match"), "\"uploaded\"")
+                    return (200, ["ETag": "\"uploaded\"", "Content-Length": String(body.count)], "")
+                }
+                uploads += 1
+                expectEqual(request.httpMethod, "PUT")
+                expectEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/pdf")
+                expectEqual(request.value(forHTTPHeaderField: "Content-Disposition"), "inline")
+                expectTrue(request.value(forHTTPHeaderField: "Authorization")?.contains("content-disposition;content-type;") == true)
+                expectEqual(request.value(forHTTPHeaderField: "x-amz-content-sha256"), S3Signer.hash(body))
+                expectEqual(request.value(forHTTPHeaderField: "If-Match"), entry.replacing ? "\"previous\"" : nil)
+                expectEqual(request.value(forHTTPHeaderField: "If-None-Match"), entry.replacing ? nil : "*")
+                return (200, ["ETag": "\"uploaded\""], "")
+            }
+            let storage = client()
+            let etag = entry.replacing ? "\"previous\"" : nil
+            if entry.finder {
+                let item = try await storage.uploadForFinder(file: file, key: entry.key, replacingETag: etag)
+                expectEqual(item.key, entry.key)
+                expectEqual(item.etag, "\"uploaded\"")
+            } else {
+                try await storage.upload(file: file, key: entry.key, replacingETag: etag)
+            }
+            expectEqual(uploads, 1)
+            expectEqual(heads, entry.finder ? 1 : 0)
+        }
     }
     func testDownloadWritesBytesAndRequiresReplacementApproval() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -437,6 +484,7 @@ private enum Issue { static func record(_ text: String) { Results.shared.record(
             ("testRenameCopiesThenChecksThenDeletes", { try await s3.testRenameCopiesThenChecksThenDeletes() }),
             ("testCreateFolderUsesConditionalEmptyPut", { try await s3.testCreateFolderUsesConditionalEmptyPut() }),
             ("testUploadUsesSignedPayloadAndNoOverwriteCondition", { try await s3.testUploadUsesSignedPayloadAndNoOverwriteCondition() }),
+            ("testPDFUploadsUseBrowserHeadersForAppAndFinder", { try await s3.testPDFUploadsUseBrowserHeadersForAppAndFinder() }),
             ("testDownloadWritesBytesAndRequiresReplacementApproval", { try await s3.testDownloadWritesBytesAndRequiresReplacementApproval() }),
             ("testFinderDownloadPinsVersionAndKeepsLocalFileOnChange", { try await s3.testFinderDownloadPinsVersionAndKeepsLocalFileOnChange() }),
             ("testDownloadErrorKeepsLocalFile", { try await s3.testDownloadErrorKeepsLocalFile() }),

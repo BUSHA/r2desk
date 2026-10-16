@@ -129,8 +129,14 @@ public struct S3Client: StorageService {
         let hashTask = Task.detached { try S3Signer.fileHash(file) }
         let hash = try await withTaskCancellationHandler(operation: { try await hashTask.value }, onCancel: { hashTask.cancel() })
         try Task.checkCancellation()
-        let mime = UTType(filenameExtension: file.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+        // Finder can supply a temporary file with no extension. Use the object name first.
+        let fileExtension = (key as NSString).pathExtension.lowercased()
+        // Keep PDF links usable even when the system type registry has no MIME type.
+        let mime = fileExtension == "pdf" ? "application/pdf" :
+            (UTType(filenameExtension: fileExtension)?.preferredMIMEType ??
+             UTType(filenameExtension: file.pathExtension)?.preferredMIMEType ?? "application/octet-stream")
         var headers = ["content-type": mime]
+        if mime == "application/pdf" { headers["content-disposition"] = "inline" }
         if let etag = replacingETag { headers["if-match"] = etag }
         else { headers["if-none-match"] = "*" }
         let request = try request("PUT", key: key, headers: headers, hash: hash)
